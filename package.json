@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "seed:products": "node src/seeders/productSeeder.js",
+    "seed:admin": "node src/seeders/adminSeeder.js",
     "seed:all": "node src/seeders/productSeeder.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
