@@ -13,6 +13,7 @@ import productRoutes from './routes/productRoutes.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
+import heroRoutes from './routes/heroRoutes.js';
 
 // Load env variables
 dotenv.config();
@@ -64,6 +65,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/hero', heroRoutes);
 
 // 404 handler for unknown routes
 app.use((req, res) => {
