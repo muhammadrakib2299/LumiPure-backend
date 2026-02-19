@@ -4,7 +4,7 @@ import { sendError } from '../utils/helpers.js';
  * Global error handler middleware
  */
 const errorHandler = (err, req, res, next) => {
-    console.error('Error:', err);
+    console.error('Error:', err.message);
 
     // Mongoose validation error
     if (err.name === 'ValidationError') {
@@ -32,9 +32,23 @@ const errorHandler = (err, req, res, next) => {
         return sendError(res, 401, 'Token expired');
     }
 
-    // Default error
+    // Multer errors
+    if (err.name === 'MulterError') {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+            return sendError(res, 400, 'File too large. Maximum size is 5MB.');
+        }
+        if (err.code === 'LIMIT_FILE_COUNT') {
+            return sendError(res, 400, 'Too many files. Maximum is 5.');
+        }
+        return sendError(res, 400, err.message);
+    }
+
+    // Default error -- hide internal details in production
     const statusCode = err.statusCode || 500;
-    const message = err.message || 'Internal server error';
+    const message =
+        process.env.NODE_ENV === 'production' && statusCode === 500
+            ? 'Internal server error'
+            : err.message || 'Internal server error';
 
     return sendError(res, statusCode, message);
 };

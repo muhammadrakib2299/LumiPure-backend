@@ -1,5 +1,18 @@
 import Category from '../models/Category.js';
+import Product from '../models/Product.js';
 import { sendSuccess, sendError } from '../utils/helpers.js';
+
+const CATEGORY_FIELDS = ['name', 'description', 'image', 'parentCategory', 'isActive'];
+
+const pickFields = (body, fields) => {
+    const result = {};
+    for (const field of fields) {
+        if (body[field] !== undefined) {
+            result[field] = body[field];
+        }
+    }
+    return result;
+};
 
 /**
  * @route   GET /api/categories
@@ -19,13 +32,34 @@ export const getCategories = async (req, res, next) => {
 };
 
 /**
+ * @route   GET /api/categories/:id
+ * @desc    Get single category
+ * @access  Public
+ */
+export const getCategory = async (req, res, next) => {
+    try {
+        const category = await Category.findById(req.params.id)
+            .populate('parentCategory', 'name slug');
+
+        if (!category) {
+            return sendError(res, 404, 'Category not found');
+        }
+
+        sendSuccess(res, 200, 'Category retrieved successfully', { category });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
  * @route   POST /api/categories
  * @desc    Create category
  * @access  Private/Admin
  */
 export const createCategory = async (req, res, next) => {
     try {
-        const category = await Category.create(req.body);
+        const data = pickFields(req.body, CATEGORY_FIELDS);
+        const category = await Category.create(data);
 
         sendSuccess(res, 201, 'Category created successfully', { category });
     } catch (error) {
@@ -40,15 +74,17 @@ export const createCategory = async (req, res, next) => {
  */
 export const updateCategory = async (req, res, next) => {
     try {
-        const category = await Category.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true, runValidators: true }
-        );
+        const data = pickFields(req.body, CATEGORY_FIELDS);
+
+        // Use findOne + save to trigger pre('save') hooks (slug generation)
+        const category = await Category.findById(req.params.id);
 
         if (!category) {
             return sendError(res, 404, 'Category not found');
         }
+
+        Object.assign(category, data);
+        await category.save();
 
         sendSuccess(res, 200, 'Category updated successfully', { category });
     } catch (error) {
@@ -63,11 +99,19 @@ export const updateCategory = async (req, res, next) => {
  */
 export const deleteCategory = async (req, res, next) => {
     try {
-        const category = await Category.findByIdAndDelete(req.params.id);
+        const category = await Category.findById(req.params.id);
 
         if (!category) {
             return sendError(res, 404, 'Category not found');
         }
+
+        // Deactivate products in this category instead of leaving orphans
+        await Product.updateMany(
+            { category: category._id },
+            { isActive: false }
+        );
+
+        await category.deleteOne();
 
         sendSuccess(res, 200, 'Category deleted successfully');
     } catch (error) {

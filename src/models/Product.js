@@ -103,8 +103,17 @@ const productSchema = new mongoose.Schema(
     },
     {
         timestamps: true,
+        toJSON: { virtuals: true },
+        toObject: { virtuals: true },
     }
 );
+
+// Indexes for common queries
+productSchema.index({ category: 1, isActive: 1 });
+productSchema.index({ isActive: 1, isFeatured: 1 });
+productSchema.index({ price: 1 });
+productSchema.index({ slug: 1 });
+productSchema.index({ createdAt: -1 });
 
 // Create slug from name before saving
 productSchema.pre('save', function (next) {

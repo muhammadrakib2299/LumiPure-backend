@@ -39,10 +39,6 @@ export const addToCart = async (req, res, next) => {
             return sendError(res, 404, 'Product not found');
         }
 
-        if (product.stock < quantity) {
-            return sendError(res, 400, 'Insufficient stock');
-        }
-
         let cart = await Cart.findOne({ user: req.user.id });
 
         if (!cart) {
@@ -53,6 +49,12 @@ export const addToCart = async (req, res, next) => {
         const existingItemIndex = cart.items.findIndex(
             (item) => item.product.toString() === productId
         );
+
+        // Check cumulative quantity against stock
+        const existingQty = existingItemIndex > -1 ? cart.items[existingItemIndex].quantity : 0;
+        if (product.stock < existingQty + quantity) {
+            return sendError(res, 400, `Insufficient stock. Only ${product.stock - existingQty} more available.`);
+        }
 
         if (existingItemIndex > -1) {
             cart.items[existingItemIndex].quantity += quantity;
@@ -100,6 +102,16 @@ export const updateCartItem = async (req, res, next) => {
 
         if (itemIndex === -1) {
             return sendError(res, 404, 'Item not found in cart');
+        }
+
+        if (quantity < 1) {
+            return sendError(res, 400, 'Quantity must be at least 1');
+        }
+
+        // Check stock
+        const product = await Product.findById(productId);
+        if (product && quantity > product.stock) {
+            return sendError(res, 400, `Only ${product.stock} items available in stock`);
         }
 
         cart.items[itemIndex].quantity = quantity;

@@ -45,8 +45,8 @@ export const sendError = (res, statusCode, message, errors = null) => {
  * @returns {object} Pagination object
  */
 export const getPagination = (page = 1, limit = 12) => {
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 12));
     const skip = (pageNum - 1) * limitNum;
 
     return {

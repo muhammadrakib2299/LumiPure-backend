@@ -17,8 +17,8 @@ const registerValidation = [
     body('name').trim().notEmpty().withMessage('Name is required'),
     body('email').isEmail().withMessage('Please provide a valid email'),
     body('password')
-        .isLength({ min: 6 })
-        .withMessage('Password must be at least 6 characters'),
+        .isLength({ min: 8 })
+        .withMessage('Password must be at least 8 characters'),
 ];
 
 const loginValidation = [
@@ -29,8 +29,8 @@ const loginValidation = [
 const changePasswordValidation = [
     body('currentPassword').notEmpty().withMessage('Current password is required'),
     body('newPassword')
-        .isLength({ min: 6 })
-        .withMessage('New password must be at least 6 characters'),
+        .isLength({ min: 8 })
+        .withMessage('New password must be at least 8 characters'),
 ];
 
 // Routes

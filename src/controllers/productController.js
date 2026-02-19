@@ -1,6 +1,31 @@
 import Product from '../models/Product.js';
 import { sendSuccess, sendError, getPagination, buildPaginationMeta } from '../utils/helpers.js';
 import { uploadImage, deleteImage } from '../config/cloudinary.js';
+import fs from 'fs';
+
+/**
+ * Escape special regex characters in user input
+ */
+const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/**
+ * Allowed fields for product creation/update
+ */
+const PRODUCT_FIELDS = [
+    'name', 'description', 'shortDescription', 'price', 'comparePrice',
+    'category', 'stock', 'sku', 'brand', 'variants', 'ingredients',
+    'howToUse', 'isFeatured', 'isActive', 'tags', 'seoTitle', 'seoDescription',
+];
+
+const pickFields = (body, fields) => {
+    const result = {};
+    for (const field of fields) {
+        if (body[field] !== undefined) {
+            result[field] = body[field];
+        }
+    }
+    return result;
+};
 
 /**
  * @route   GET /api/products
@@ -21,10 +46,11 @@ export const getProducts = async (req, res, next) => {
         }
 
         if (search) {
+            const escaped = escapeRegex(search);
             query.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } },
-                { brand: { $regex: search, $options: 'i' } },
+                { name: { $regex: escaped, $options: 'i' } },
+                { description: { $regex: escaped, $options: 'i' } },
+                { brand: { $regex: escaped, $options: 'i' } },
             ];
         }
 
@@ -34,14 +60,15 @@ export const getProducts = async (req, res, next) => {
             if (maxPrice) query.price.$lte = parseFloat(maxPrice);
         }
 
-        // Get products
-        const products = await Product.find(query)
-            .populate('category', 'name slug')
-            .sort(sort)
-            .skip(skip)
-            .limit(limitNum);
-
-        const total = await Product.countDocuments(query);
+        // Run find and count in parallel
+        const [products, total] = await Promise.all([
+            Product.find(query)
+                .populate('category', 'name slug')
+                .sort(sort)
+                .skip(skip)
+                .limit(limitNum),
+            Product.countDocuments(query),
+        ]);
 
         const pagination = buildPaginationMeta(total, pageNum, limitNum);
 
@@ -81,7 +108,8 @@ export const getProduct = async (req, res, next) => {
  */
 export const createProduct = async (req, res, next) => {
     try {
-        const product = await Product.create(req.body);
+        const data = pickFields(req.body, PRODUCT_FIELDS);
+        const product = await Product.create(data);
 
         sendSuccess(res, 201, 'Product created successfully', { product });
     } catch (error) {
@@ -96,15 +124,17 @@ export const createProduct = async (req, res, next) => {
  */
 export const updateProduct = async (req, res, next) => {
     try {
-        const product = await Product.findByIdAndUpdate(
-            req.params.id,
-            req.body,
-            { new: true, runValidators: true }
-        );
+        const data = pickFields(req.body, PRODUCT_FIELDS);
+
+        // Use findOne + save to trigger pre('save') hooks (slug generation)
+        const product = await Product.findById(req.params.id);
 
         if (!product) {
             return sendError(res, 404, 'Product not found');
         }
+
+        Object.assign(product, data);
+        await product.save();
 
         sendSuccess(res, 200, 'Product updated successfully', { product });
     } catch (error) {
@@ -125,12 +155,12 @@ export const deleteProduct = async (req, res, next) => {
             return sendError(res, 404, 'Product not found');
         }
 
-        // Delete images from Cloudinary
-        for (const image of product.images) {
-            if (image.public_id) {
-                await deleteImage(image.public_id);
-            }
-        }
+        // Delete images from Cloudinary in parallel
+        await Promise.all(
+            product.images
+                .filter((image) => image.public_id)
+                .map((image) => deleteImage(image.public_id))
+        );
 
         await product.deleteOne();
 
@@ -157,21 +187,28 @@ export const uploadProductImages = async (req, res, next) => {
             return sendError(res, 404, 'Product not found');
         }
 
-        const images = [];
-
-        for (const file of req.files) {
-            const result = await uploadImage(file.path, 'lumipure/products');
-            images.push({
-                public_id: result.public_id,
-                url: result.secure_url,
-            });
-        }
+        // Upload images in parallel and clean up temp files
+        const images = await Promise.all(
+            req.files.map(async (file) => {
+                try {
+                    const result = await uploadImage(file.path, 'lumipure/products');
+                    return { public_id: result.public_id, url: result.secure_url };
+                } finally {
+                    // Clean up temp file from disk
+                    fs.unlink(file.path, () => {});
+                }
+            })
+        );
 
         product.images.push(...images);
         await product.save();
 
         sendSuccess(res, 200, 'Images uploaded successfully', { images });
     } catch (error) {
+        // Clean up any remaining temp files on error
+        if (req.files) {
+            req.files.forEach((file) => fs.unlink(file.path, () => {}));
+        }
         next(error);
     }
 };

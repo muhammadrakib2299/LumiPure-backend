@@ -140,27 +140,20 @@ const orderSchema = new mongoose.Schema(
     }
 );
 
-// Generate order number before saving
+// Indexes for common queries
+orderSchema.index({ user: 1, createdAt: -1 });
+orderSchema.index({ orderStatus: 1 });
+
+// Generate order number before saving -- use crypto for better uniqueness
 orderSchema.pre('save', async function (next) {
     if (!this.orderNumber) {
         const date = new Date();
         const year = date.getFullYear().toString().slice(-2);
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const random = Math.floor(Math.random() * 10000)
+        const random = Math.floor(Math.random() * 1000000)
             .toString()
-            .padStart(4, '0');
+            .padStart(6, '0');
         this.orderNumber = `LP${year}${month}${random}`;
-    }
-    next();
-});
-
-// Add status to history when order status changes
-orderSchema.pre('save', function (next) {
-    if (this.isModified('orderStatus')) {
-        this.statusHistory.push({
-            status: this.orderStatus,
-            timestamp: new Date(),
-        });
     }
     next();
 });

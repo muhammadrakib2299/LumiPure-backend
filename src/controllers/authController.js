@@ -92,6 +92,10 @@ export const getMe = async (req, res, next) => {
     try {
         const user = await User.findById(req.user.id);
 
+        if (!user) {
+            return sendError(res, 404, 'User not found');
+        }
+
         sendSuccess(res, 200, 'User data retrieved successfully', { user });
     } catch (error) {
         next(error);
@@ -129,6 +133,10 @@ export const changePassword = async (req, res, next) => {
         const { currentPassword, newPassword } = req.body;
 
         const user = await User.findById(req.user.id).select('+password');
+
+        if (!user) {
+            return sendError(res, 404, 'User not found');
+        }
 
         // Check current password
         const isPasswordValid = await user.comparePassword(currentPassword);
