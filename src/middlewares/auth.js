@@ -1,6 +1,7 @@
 import { verifyToken } from '../utils/generateToken.js';
 import User from '../models/User.js';
 import { sendError } from '../utils/helpers.js';
+import { USER_ROLES } from '../config/constants.js';
 
 /**
  * Protect routes - Check if user is authenticated
@@ -49,7 +50,7 @@ export const protect = async (req, res, next) => {
  * Check if user is admin
  */
 export const adminOnly = (req, res, next) => {
-    if (req.user && req.user.role === 'admin') {
+    if (req.user && req.user.role === USER_ROLES.ADMIN) {
         next();
     } else {
         return sendError(

@@ -75,6 +75,35 @@ reviewSchema.post('save', async function () {
     }
 });
 
+// Recalculate product ratings when review is deleted
+reviewSchema.post('findOneAndDelete', async function (doc) {
+    if (doc) {
+        const Product = mongoose.model('Product');
+        const stats = await Review.aggregate([
+            { $match: { product: doc.product } },
+            {
+                $group: {
+                    _id: '$product',
+                    averageRating: { $avg: '$rating' },
+                    reviewCount: { $sum: 1 },
+                },
+            },
+        ]);
+
+        if (stats.length > 0) {
+            await Product.findByIdAndUpdate(doc.product, {
+                'ratings.average': Math.round(stats[0].averageRating * 10) / 10,
+                'ratings.count': stats[0].reviewCount,
+            });
+        } else {
+            await Product.findByIdAndUpdate(doc.product, {
+                'ratings.average': 0,
+                'ratings.count': 0,
+            });
+        }
+    }
+});
+
 const Review = mongoose.model('Review', reviewSchema);
 
 export default Review;

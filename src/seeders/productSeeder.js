@@ -300,13 +300,17 @@ const seedDatabase = async () => {
         await Category.deleteMany({});
         console.log('✅ Existing data cleared\n');
 
-        // Insert categories
+        // Insert categories using save() so pre-save hooks generate slugs
         console.log('📁 Creating categories...');
-        const createdCategories = await Category.insertMany(sampleCategories);
+        const createdCategories = [];
+        for (const cat of sampleCategories) {
+            const created = await Category.create(cat);
+            createdCategories.push(created);
+        }
         console.log(`✅ Created ${createdCategories.length} categories\n`);
 
         // Get Skincare category ID for products
-        const skincareCategory = createdCategories.find(cat => cat.slug === 'skincare');
+        const skincareCategory = createdCategories.find(cat => cat.name === 'Skincare');
 
         // Add category to products
         const productsWithCategory = sampleProducts.map(product => ({
@@ -314,9 +318,13 @@ const seedDatabase = async () => {
             category: skincareCategory._id,
         }));
 
-        // Insert products
+        // Insert products using save() so pre-save hooks generate slugs
         console.log('📦 Creating products...');
-        const createdProducts = await Product.insertMany(productsWithCategory);
+        const createdProducts = [];
+        for (const prod of productsWithCategory) {
+            const created = await Product.create(prod);
+            createdProducts.push(created);
+        }
         console.log(`✅ Created ${createdProducts.length} products\n`);
 
         // Display summary

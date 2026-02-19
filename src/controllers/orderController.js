@@ -3,7 +3,7 @@ import Order from '../models/Order.js';
 import Cart from '../models/Cart.js';
 import Product from '../models/Product.js';
 import { sendSuccess, sendError, getPagination, buildPaginationMeta } from '../utils/helpers.js';
-import { ORDER_STATUS } from '../config/constants.js';
+import { ORDER_STATUS, USER_ROLES } from '../config/constants.js';
 
 /**
  * Valid order status transitions
@@ -130,7 +130,7 @@ export const getOrderById = async (req, res, next) => {
         }
 
         // Check if order belongs to user or user is admin
-        if (order.user._id.toString() !== req.user.id && req.user.role !== 'admin') {
+        if (order.user._id.toString() !== req.user.id && req.user.role !== USER_ROLES.ADMIN) {
             return sendError(res, 403, 'Not authorized to access this order');
         }
 
