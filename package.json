@@ -1,6 +1,10 @@
 {
   "name": "lumipure-backend",
   "version": "1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/muhammadrakib2299/LumiPure-backend.git"
+  },
   "description": "Backend API for LumiPure Beauty E-commerce",
   "main": "src/server.js",
   "type": "module",
@@ -19,7 +23,7 @@
     "express",
     "mongodb"
   ],
-  "author": "",
+  "author": "Md. Rakib (https://devrakib.com)",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",

@@ -2,6 +2,8 @@
 
 Backend API for LumiPure Beauty E-commerce Platform built with Node.js, Express, and MongoDB.
 
+Frontend (Next.js storefront and admin panel): [LumiPure-frontend](https://github.com/muhammadrakib2299/LumiPure-frontend)
+
 ## 🚀 Quick Start
 
 ### Prerequisites
